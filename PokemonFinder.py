@@ -104,7 +104,7 @@ TRADUCCION_TIPOS = {
 # 3. Barra Lateral (Sidebar)
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("### 🔴 Panel de Control - PokéVGC")
+    st.markdown("### 🔴 Panel de Control - Pokémon Finder")
     archivo_imagen = st.file_uploader("Sube la imagen del Pokémon", type=["jpg", "jpeg", "png"])
     st.markdown("---")
     
@@ -134,7 +134,7 @@ with st.sidebar:
 # -----------------------------------------------------------------------------
 st.markdown(f"""
 <div class="encabezado">
-  <h1>🔴 PokéVGC Dashboard: Reconocimiento con YOLOv8 e IA Generativa</h1>
+  <h1>🔴 Pokémon Finder Dashboard: Reconocimiento con YOLOv8 e IA Generativa</h1>
   <p>Clasificación visual avanzada, análisis táctico de estadísticas y recomendación por LLM.</p>
 </div>
 """, unsafe_allow_html=True)
