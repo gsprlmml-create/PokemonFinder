@@ -278,6 +278,9 @@ if pokemon_detectado is not None:
             if st.button("✨ Generar Recomendación con IA"):
                 with st.spinner("Consultando al modelo de lenguaje (Gemini)..."):
                     try:
+                        # Usar el modelo estándar actual con la API de generación directa
+                        model_gemini = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        
                         prompt = f"""
                         Actúa como un experto analista competitivo de Pokémon VGC.
                         El modelo de visión artificial ha clasificado la imagen como: {pokemon_detectado['Name']} con una confianza de {confianza_val:.1f}%.
@@ -294,19 +297,18 @@ if pokemon_detectado is not None:
                         Por favor, entrega una recomendación táctica corta sobre su rol principal en combate, fortalezas y debilidades a considerar. 
                         Incluye un aviso aclarando que este es un prototipo educativo de apoyo táctico.
                         """
-                        model_gemini = genai.GenerativeModel('gemini-pro')
+                        
                         response = model_gemini.generate_content(prompt)
                         st.success("¡Recomendación generada con éxito!")
                         st.markdown(response.text)
                     except Exception as e:
-                        st.error(f"Error al comunicarse con la API de Gemini: {e}")
+                        # Fallback por si el modelo específico no responde en la cuenta
+                        try:
+                            model_alt = genai.GenerativeModel('gemini-pro')
+                            response = model_alt.generate_content(prompt)
+                            st.success("¡Recomendación generada con éxito!")
+                            st.markdown(response.text)
+                        except Exception as e2:
+                            st.error(f"Error al comunicarse con la API de Gemini: {e2}")
         else:
             st.error("⚠️ La clave API de Gemini (`GEMINI_API_KEY`) no está configurada en los secretos de Streamlit.")
-
-else:
-    st.info("👈 Sube una imagen de un Pokémon en la barra lateral para iniciar el análisis automático y activar las pestañas.")
-
-# Pie de página
-st.markdown(f"<hr style='border:none;border-top:1px solid {GRILLA}'>"
-            f"<p style='color: {TENUE}; text-align: center;'>Ayudantía IA para la Gestión Industrial · UDD</p>",
-            unsafe_allow_html=True)
