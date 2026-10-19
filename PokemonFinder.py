@@ -22,11 +22,11 @@ from ultralytics import YOLO
 warnings.filterwarnings("ignore")
 
 # -----------------------------------------------------------------------------
-# 1. Configuración visual (Pokébola como ícono de pestaña / Favicon)
+# 1. Configuración visual 
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Pokédex VGC - YOLOv8 Dashboard",
-    page_icon="🔴",  # Puedes usar una Pokébola o emoji temático
+    page_title="Pokédex Ejecutiva - YOLOv8",
+    page_icon="🔴",  
     layout="wide"
 )
 
