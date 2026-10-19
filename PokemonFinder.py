@@ -11,7 +11,6 @@ Original file is located at
 # =============================================================================
 
 import os
-import ast
 import warnings
 import numpy as np
 import pandas as pd
@@ -22,7 +21,7 @@ from ultralytics import YOLO
 warnings.filterwarnings("ignore")
 
 # -----------------------------------------------------------------------------
-# 1. Configuración visual y diseño elegante
+# 1. Configuración visual y diseño elegante (Estilo Oscuro / Gaming)
 # -----------------------------------------------------------------------------
 st.set_page_config(
     page_title="Pokédex YOLOv8",
@@ -30,7 +29,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# Colores y estilo inspirados en interfaces modernas de gaming/estadísticas
 TINTA = "#F0F4F8"
 TENUE = "#94A3B8"
 GRILLA = "#334155"
@@ -61,18 +59,11 @@ st.markdown(f"""
   }}
   [data-testid="stMetricLabel"] p {{ color: {TENUE}; font-size: 0.9rem; font-weight: 600; }}
   [data-testid="stMetricValue"] {{ font-size: 1.6rem; color: #FFFFFF; }}
-  
-  .stCard {{
-      background: {PANEL};
-      border: 1px solid {GRILLA};
-      border-radius: 12px;
-      padding: 20px;
-  }}
 </style>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 2. Funciones de Carga y Procesamiento
+# 2. Funciones de Carga
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def cargar_modelo():
@@ -86,7 +77,8 @@ def cargar_base_pokemon():
     csv_path = "pokemon.csv"
     if os.path.exists(csv_path):
         df = pd.read_csv(csv_path)
-        df["name_lower"] = df["pokemon_name"].str.lower()
+        # Limpiar y normalizar nombres para búsqueda insensible a mayúsculas
+        df["name_lower"] = df["Name"].str.lower()
         return df
     return None
 
@@ -147,7 +139,7 @@ if archivo_imagen is not None:
             st.success(f"¡Pokémon Detectado: **{detectado}**!")
             st.metric(label="Confianza del Modelo", value=f"{confianza:.1f}%")
             
-            # Buscar datos en el CSV
+            # Buscar datos en la nueva base pokemon.csv
             info_poke = None
             if df_pokemon is not None:
                 match = df_pokemon[df_pokemon["name_lower"] == detectado.lower()]
@@ -156,41 +148,29 @@ if archivo_imagen is not None:
             
             if info_poke is not None:
                 st.markdown("---")
-                st.markdown(f"### 🧬 Atributos de **{info_poke['pokemon_name']}**")
+                st.markdown(f"### 🧬 Atributos de **{info_poke['Name']}**")
                 
-                # Corrección específica para Articuno si el CSV trae datos de Galar u otros
-                tipos_brutos = info_poke["type"]
-                try:
-                    lista_tipos = ast.literal_eval(tipos_brutos)
-                except:
-                    lista_tipos = [tipos_brutos]
+                # Procesar tipos (Type1 y Type2)
+                t1 = info_poke["Type1"]
+                t2 = info_poke.get("Type2")
                 
-                if info_poke['pokemon_name'].lower() == 'articuno':
-                    lista_tipos = ['Ice', 'Flying']  # Forzar Hielo/Volador clásico
+                tipos_lista = [t1]
+                if pd.notna(t2) and str(t2).strip() != "" and str(t2).lower() != "nan":
+                    tipos_lista.append(t2)
                 
-                tipos_es = [TRADUCCION_TIPOS.get(t, t) for t in lista_tipos]
-                st.markdown(f"**Tipo(s):** `{' / '.join(tipos_es)}` &nbsp;|&nbsp; **Rareza:** `{info_poke['rarity']}`")
+                tipos_es = [TRADUCCION_TIPOS.get(str(t).strip(), str(t).strip()) for t in tipos_lista]
+                st.markdown(f"**Tipo(s):** `{' / '.join(tipos_es)}` &nbsp;|&nbsp; **Generación:** `{info_poke['Generation']}`")
                 
-                # Estadísticas estilo juego clásico (como tu 3era imagen)
+                # Estadísticas base directas del nuevo CSV
                 st.markdown("#### Estadísticas Base")
                 
-                # Si el usuario quiere ver las stats estilo clásico o las del CSV adaptadas:
-                hp = int(info_poke['base_stamina'])
-                atk = int(info_poke['base_attack'])
-                def_ = int(info_poke['base_defense'])
-                # Estimaciones equilibradas para simular las 6 stats principales de la 3era imagen
-                spa = int(atk * 0.95)
-                spd = int(def_ * 1.05)
-                spe = int((atk + def_) / 4 + 40)
-                total_stats = hp + atk + def_ + spa + spd + spe
-                
                 stats_dict = {
-                    "PS (H)": hp,
-                    "Ataque (A)": atk,
-                    "Defensa (B)": def_,
-                    "At. Esp. (C)": spa,
-                    "Def. Esp. (D)": spd,
-                    "Velocidad (S)": spe
+                    "PS (HP)": int(info_poke['HP']),
+                    "Ataque (Attack)": int(info_poke['Attack']),
+                    "Defensa (Defense)": int(info_poke['Defense']),
+                    "At. Esp. (Sp. Atk)": int(info_poke['Sp. Atk']),
+                    "Def. Esp. (Sp. Def)": int(info_poke['Sp. Def']),
+                    "Velocidad (Speed)": int(info_poke['Speed'])
                 }
                 
                 for label, val in stats_dict.items():
@@ -201,13 +181,10 @@ if archivo_imagen is not None:
                     with col_s2:
                         st.markdown(f"<h3 style='margin:0; text-align:right;'>{val}</h3>", unsafe_allow_html=True)
                 
-                st.markdown(f"**Total Estadísticas Base:** `{total_stats}`")
+                st.markdown(f"**Total Estadísticas Base:** `{int(info_poke['Total'])}`")
                 
-                with st.expander("Ver movimientos detallados"):
-                    st.markdown(f"**Movimientos Rápidos:** {info_poke['fast_moves']}")
-                    st.markdown(f"**Movimientos Cargados:** {info_poke['charged_notes'] if 'charged_notes' in info_poke else info_poke['charged_moves']}")
             else:
-                st.info(f"Se detectó '{detectado}', pero no se encontró en el archivo `pokemon.csv`.")
+                st.info(f"Se detectó '{detectado}', pero no se encontró coincidencia en el archivo `pokemon.csv`.")
         else:
             st.error("El modelo no está disponible.")
 else:
