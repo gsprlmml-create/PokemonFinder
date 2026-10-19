@@ -279,7 +279,7 @@ if pokemon_detectado is not None:
                 with st.spinner("Consultando al modelo de lenguaje (Gemini)..."):
                     try:
                         # Usar el modelo estándar actualizado de Gemini
-                        model_gemini = genai.GenerativeModel('gemini-2.0-flash')
+                        model_gemini = genai.GenerativeModel('gemini-3.8-flash')
                         
                         prompt = f"""
                         Actúa como un experto analista competitivo de Pokémon VGC.
