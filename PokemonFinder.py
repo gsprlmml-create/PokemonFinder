@@ -22,11 +22,11 @@ from ultralytics import YOLO
 warnings.filterwarnings("ignore")
 
 # -----------------------------------------------------------------------------
-# 1. Configuración visual y diseño elegante (Estilo Oscuro / Gaming)
+# 1. Configuración visual (Pokébola como ícono de pestaña / Favicon)
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Pokédex YOLOv8",
-    page_icon="⚡",
+    page_title="Pokédex VGC - YOLOv8 Dashboard",
+    page_icon="🔴",  # Puedes usar una Pokébola o emoji temático
     layout="wide"
 )
 
@@ -42,7 +42,7 @@ st.markdown(f"""
   .block-container {{ padding-top: 1.5rem; max-width: 1400px; }}
   .encabezado {{ 
       background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-      border-left: 6px solid {AZUL}; 
+      border-left: 6px solid #EF4444; 
       padding: 18px 24px; 
       border-radius: 12px;
       margin-bottom: 24px; 
@@ -93,10 +93,10 @@ TRADUCCION_TIPOS = {
 }
 
 # -----------------------------------------------------------------------------
-# 3. Barra Lateral (Sidebar) - Mantiene la imagen visible en todo momento
+# 3. Barra Lateral (Sidebar)
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("### 🎛️ Panel de Control")
+    st.markdown("### 🔴 Panel de Control - PokéVGC")
     archivo_imagen = st.file_uploader("Sube la imagen del Pokémon", type=["jpg", "jpeg", "png"])
     st.markdown("---")
     
@@ -126,8 +126,8 @@ with st.sidebar:
 # -----------------------------------------------------------------------------
 st.markdown(f"""
 <div class="encabezado">
-  <h1>Pokédex Inteligente con YOLOv8</h1>
-  <p>Clasificación visual por IA, análisis de estadísticas y comparativa de especies.</p>
+  <h1>🔴 PokéVGC Dashboard: Reconocimiento con YOLOv8</h1>
+  <p>Clasificación visual avanzada, análisis táctico de estadísticas base y comparativa de especies.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -175,19 +175,16 @@ if pokemon_detectado is not None:
             
             st.markdown(f"**Total Estadísticas Base:** `{int(pokemon_detectado['Total'])}`")
 
-    # --- PESTAÑA 2: EVOLUCIÓN (Pre-evolución y Siguiente Evolución) ---
+    # --- PESTAÑA 2: EVOLUCIÓN ---
     with tabs[1]:
         st.subheader(f"🧬 Línea Evolutiva de {pokemon_detectado['Name']}")
         
         poke_id = int(pokemon_detectado['ID'])
         poke_name = pokemon_detectado['Name']
-        
         legendarios_o_unicos = ['mewtwo', 'mew', 'articuno', 'zapdos', 'moltres', 'ditto', 'unown']
         
-        # 1. Pre-evolución (si el ID es mayor al inicial de su cadena base)
         tiene_preevo = False
         if poke_id not in [1, 4, 7, 10, 13, 16, 21, 25, 27, 29, 32, 35, 37, 39, 41, 43, 46, 48, 50, 52, 54, 56, 60, 63, 66, 69, 72, 74, 77, 79, 81, 84, 86, 88, 90, 92, 95, 96, 98, 100, 102, 104, 108, 109, 111, 116, 118, 120, 123, 127, 129, 133, 138, 140, 142, 147, 152, 155, 158] and poke_name.lower() not in legendarios_o_unicos:
-            # Buscar pre-evolución lógica anterior dentro del mismo bloque de IDs
             prev_id = poke_id - 1
             prev_match = df_pokemon[df_pokemon['ID'] == prev_id]
             if not prev_match.empty:
@@ -199,7 +196,6 @@ if pokemon_detectado is not None:
         if not tiene_preevo and poke_name.lower() not in legendarios_o_unicos:
             st.info(f"✨ **{poke_name}** es la primera etapa de su línea evolutiva (no tiene pre-evolución).")
 
-        # 2. Siguiente Evolución
         sig_id = poke_id + 1
         sig_match = df_pokemon[df_pokemon['ID'] == sig_id] if df_pokemon is not None else pd.DataFrame()
         
@@ -210,7 +206,6 @@ if pokemon_detectado is not None:
             nivel_req = 16 if poke_id % 3 == 1 else 36
             st.info(f"➔ **Siguiente Evolución:** Evoluciona a **{sig_name}** al alcanzar el **Nivel {nivel_req}**.")
             
-            # Tercera fase si existe (ej: Wartortle -> Blastoise)
             sig_sig_id = poke_id + 2
             sig_sig_match = df_pokemon[df_pokemon['ID'] == sig_sig_id]
             if not sig_sig_match.empty and poke_id % 3 == 1:
@@ -219,7 +214,7 @@ if pokemon_detectado is not None:
         else:
             st.info(f"✨ **{poke_name}** se encuentra en su etapa final y **no tiene más evoluciones**.")
 
-    # --- PESTAÑA 3: COMPARATIVA DE PODER (Mantiene imagen a la izquierda) ---
+    # --- PESTAÑA 3: COMPARATIVA DE PODER ---
     with tabs[2]:
         st.subheader("⚔️ Comparativa de Estadísticas")
         
