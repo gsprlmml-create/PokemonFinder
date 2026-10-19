@@ -4,3 +4,4 @@ Pillow
 pandas
 requests
 plotly
+opencv-python-headless
