@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1gZbJyv-77u3C6vwuxhD_X8We8Aolg26z
 """
 # =============================================================================
-# Pokédex Inteligente con YOLOv8 y Streamlit
+# Pokédex Inteligente con YOLOv8, Streamlit y Gemini API (LLM)
 # =============================================================================
 
 import os
@@ -18,17 +18,25 @@ import plotly.graph_objects as go
 import streamlit as st
 from PIL import Image
 from ultralytics import YOLO
+import google.generativeai as genai
 
 warnings.filterwarnings("ignore")
 
 # -----------------------------------------------------------------------------
-# 1. Configuración visual 
+# 1. Configuración visual y credenciales de IA Generativa
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Pokédex Ejecutiva - YOLOv8",
-    page_icon="🔴",  
+    page_title="Pokédex Finder",
+    page_icon="🔴",
     layout="wide"
 )
+
+# Configurar API Key de Gemini desde los Secretos de Streamlit Cloud
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    llm_disponible = True
+else:
+    llm_disponible = False
 
 TINTA = "#F0F4F8"
 TENUE = "#94A3B8"
@@ -126,13 +134,13 @@ with st.sidebar:
 # -----------------------------------------------------------------------------
 st.markdown(f"""
 <div class="encabezado">
-  <h1>🔴 PokéVGC Dashboard: Reconocimiento con YOLOv8</h1>
-  <p>Clasificación visual avanzada, análisis táctico de estadísticas base y comparativa de especies.</p>
+  <h1>🔴 PokéVGC Dashboard: Reconocimiento con YOLOv8 e IA Generativa</h1>
+  <p>Clasificación visual avanzada, análisis táctico de estadísticas y recomendación por LLM.</p>
 </div>
 """, unsafe_allow_html=True)
 
 if pokemon_detectado is not None:
-    tabs = st.tabs(["⚡ Ficha Principal y Stats", "🧬 Evolución", "⚔️ Comparativa de Poder"])
+    tabs = st.tabs(["⚡ Ficha Principal", "🧬 Evolución", "⚔️ Comparativa", "🤖 Recomendación IA"])
     
     # --- PESTAÑA 1: FICHA PRINCIPAL Y STATS ---
     with tabs[0]:
@@ -257,6 +265,43 @@ if pokemon_detectado is not None:
                 showlegend=True, height=420, margin=dict(l=20, r=20, t=20, b=20)
             )
             st.plotly_chart(fig, use_container_width=True)
+
+    # --- PESTAÑA 4: RECOMENDACIÓN IA (LLM) ---
+    with tabs[3]:
+        st.subheader("🤖 Análisis y Recomendación Táctica por IA")
+        st.markdown("Genera una recomendación de combate competitivo basada en las estadísticas y tipos del Pokémon detectado usando Google Gemini.")
+        
+        if confianza_val < 70:
+            st.warning("⚠️ **Advertencia de Confianza Baja:** El modelo YOLOv8 detectó este Pokémon con una confianza inferior al 70%. Se recomienda revisión humana de la imagen.")
+            
+        if llm_disponible:
+            if st.button("✨ Generar Recomendación con IA"):
+                with st.spinner("Consultando al modelo de lenguaje (Gemini)..."):
+                    try:
+                        prompt = f"""
+                        Actúa como un experto analista competitivo de Pokémon VGC.
+                        El modelo de visión artificial ha clasificado la imagen como: {pokemon_detectado['Name']} con una confianza de {confianza_val:.1f}%.
+                        Sus atributos son:
+                        - Tipo 1: {pokemon_detectado['Type1']}
+                        - Tipo 2: {pokemon_detectado.get('Type2', 'Ninguno')}
+                        - HP: {pokemon_detectado['HP']}
+                        - Ataque: {pokemon_detectado['Attack']}
+                        - Defensa: {pokemon_detectado['Defense']}
+                        - At. Esp: {pokemon_detectado['Sp. Atk']}
+                        - Def. Esp: {pokemon_detectado['Sp. Def']}
+                        - Velocidad: {pokemon_detectado['Speed']}
+                        
+                        Por favor, entrega una recomendación táctica corta sobre su rol principal en combate, fortalezas y debilidades a considerar. 
+                        Incluye un aviso aclarando que este es un prototipo educativo de apoyo táctico.
+                        """
+                        model_gemini = genai.GenerativeModel('gemini-1.5-flash')
+                        response = model_gemini.generate_content(prompt)
+                        st.success("¡Recomendación generada con éxito!")
+                        st.markdown(response.text)
+                    except Exception as e:
+                        st.error(f"Error al comunicarse con la API de Gemini: {e}")
+        else:
+            st.error("⚠️ La clave API de Gemini (`GEMINI_API_KEY`) no está configurada en los secretos de Streamlit.")
 
 else:
     st.info("👈 Sube una imagen de un Pokémon en la barra lateral para iniciar el análisis automático y activar las pestañas.")
