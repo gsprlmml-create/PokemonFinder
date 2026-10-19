@@ -2,6 +2,6 @@ streamlit
 ultralytics
 Pillow
 pandas
-requests
 plotly
 opencv-python-headless
+google-generativeai
