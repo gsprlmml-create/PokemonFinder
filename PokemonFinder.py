@@ -7,8 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1gZbJyv-77u3C6vwuxhD_X8We8Aolg26z
 """
 
-pip install -r requirements.txt
-
 # =============================================================================
 # Dashboard Ejecutivo: Pokédex Inteligente con YOLOv8
 # Ayudantía - IA para la Gestión Industrial (UDD) / Proyecto Personal
