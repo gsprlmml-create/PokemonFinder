@@ -278,8 +278,8 @@ if pokemon_detectado is not None:
             if st.button("✨ Generar Recomendación con IA"):
                 with st.spinner("Consultando al modelo de lenguaje (Gemini)..."):
                     try:
-                        # Usar el modelo estándar actual con la API de generación directa
-                        model_gemini = genai.GenerativeModel('gemini-1.5-flash-latest')
+                        # Usar el modelo estándar actualizado de Gemini
+                        model_gemini = genai.GenerativeModel('gemini-2.0-flash')
                         
                         prompt = f"""
                         Actúa como un experto analista competitivo de Pokémon VGC.
@@ -302,13 +302,6 @@ if pokemon_detectado is not None:
                         st.success("¡Recomendación generada con éxito!")
                         st.markdown(response.text)
                     except Exception as e:
-                        # Fallback por si el modelo específico no responde en la cuenta
-                        try:
-                            model_alt = genai.GenerativeModel('gemini-pro')
-                            response = model_alt.generate_content(prompt)
-                            st.success("¡Recomendación generada con éxito!")
-                            st.markdown(response.text)
-                        except Exception as e2:
-                            st.error(f"Error al comunicarse con la API de Gemini: {e2}")
+                        st.error(f"Error al comunicarse con la API de Gemini: {e}")
         else:
             st.error("⚠️ La clave API de Gemini (`GEMINI_API_KEY`) no está configurada en los secretos de Streamlit.")
