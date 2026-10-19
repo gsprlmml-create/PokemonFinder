@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1gZbJyv-77u3C6vwuxhD_X8We8Aolg26z
 """
 # =============================================================================
-# Dashboard Pokédex Inteligente con YOLOv8 y Estilo Ejecutivo UDD
+# Pokédex Inteligente con YOLOv8 y Streamlit
 # =============================================================================
 
 import os
@@ -22,40 +22,51 @@ from ultralytics import YOLO
 warnings.filterwarnings("ignore")
 
 # -----------------------------------------------------------------------------
-# 1. Configuración visual (Estilo Ejecutivo / Dashboard UDD)
+# 1. Configuración visual y diseño elegante (Estilo Oscuro / Gaming)
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Pokédex Ejecutiva - YOLOv8",
+    page_title="Pokédex YOLOv8",
     page_icon="⚡",
     layout="wide"
 )
 
-TINTA = "#1B2430"
-TENUE = "#5F6B7A"
-GRILLA = "#E6E9EE"
-PANEL = "#F5F7FA"
-AZUL = "#1F5A96"
+TINTA = "#F0F4F8"
+TENUE = "#94A3B8"
+GRILLA = "#334155"
+PANEL = "#1E293B"
+AZUL = "#3B82F6"
 COBRE = "#C0692B"
 
 st.markdown(f"""
 <style>
-  .block-container {{ padding-top: 1.4rem; max-width: 1350px; }}
-  .encabezado {{ border-left: 5px solid {AZUL}; padding: 4px 0 4px 16px; margin-bottom: 16px; }}
-  .encabezado h1 {{ font-size: 1.9rem; margin: 0; color: {TINTA}; }}
-  .encabezado p {{ margin: 2px 0 0; color: {TENUE}; font-size: .95rem; }}
-  [data-testid="stMetric"] {{ background: {PANEL}; border: 1px solid {GRILLA};
-      border-radius: 8px; padding: 12px 16px; }}
-  [data-testid="stMetricLabel"] p {{ color: {TENUE}; font-size: .85rem; }}
-  [data-testid="stMetricValue"] {{ font-size: 1.7rem; }}
-  .stTabs [data-baseweb="tab-list"] {{ gap: 2px; border-bottom: 1px solid {GRILLA}; }}
-  .stTabs [data-baseweb="tab"] {{ padding: 8px 16px; }}
-  .caja {{ background: {PANEL}; border: 1px solid {GRILLA}; border-radius: 8px;
-      padding: 14px 18px; margin-bottom: 10px; }}
+  .block-container {{ padding-top: 1.5rem; max-width: 1400px; }}
+  .encabezado {{ 
+      background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+      border-left: 6px solid {AZUL}; 
+      padding: 18px 24px; 
+      border-radius: 12px;
+      margin-bottom: 24px; 
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  }}
+  .encabezado h1 {{ font-size: 2.1rem; margin: 0; color: #FFFFFF; font-weight: 700; }}
+  .encabezado p {{ margin: 6px 0 0; color: {TENUE}; font-size: 1rem; }}
+  
+  [data-testid="stMetric"] {{ 
+      background: {PANEL}; 
+      border: 1px solid {GRILLA};
+      border-radius: 10px; 
+      padding: 14px 18px; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }}
+  [data-testid="stMetricLabel"] p {{ color: {TENUE}; font-size: 0.9rem; font-weight: 600; }}
+  [data-testid="stMetricValue"] {{ font-size: 1.6rem; color: #FFFFFF; }}
+  .stTabs [data-baseweb="tab-list"] {{ gap: 4px; }}
+  .stTabs [data-baseweb="tab"] {{ padding: 10px 20px; }}
 </style>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 2. Funciones de Carga con Caché
+# 2. Carga de Modelos y Datos
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def cargar_modelo():
@@ -84,166 +95,162 @@ TRADUCCION_TIPOS = {
 }
 
 # -----------------------------------------------------------------------------
-# 3. Barra Lateral (Sidebar)
+# 3. Barra Lateral (Sidebar) - Único punto para subir la imagen
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("### Panel de Control")
-    archivo_imagen = st.file_uploader("Subir imagen de Pokémon", type=["jpg", "jpeg", "png"])
+    st.markdown("### 🎛️ Panel de Control")
+    archivo_imagen = st.file_uploader("Sube la imagen del Pokémon", type=["jpg", "jpeg", "png"])
     st.markdown("---")
-    st.caption("Proyecto Pokédex · YOLOv8n-cls + Streamlit")
+    st.caption("Pokédex Inteligente · YOLOv8n-cls")
     if model is None:
-        st.warning("Modelo `best.pt` no encontrado en la raíz.")
-    if df_evolution is None:
-        st.info("💡 Consejo: Sube `pokemon_evolution.csv` para ver las líneas evolutivas.")
+        st.error("⚠️ Falta el archivo `best.pt`")
+    if df_pokemon is None:
+        st.error("⚠️ Falta el archivo `pokemon.csv`")
 
 # -----------------------------------------------------------------------------
-# 4. Encabezado Principal y Pestañas
+# 4. Panel Principal
 # -----------------------------------------------------------------------------
 st.markdown(f"""
 <div class="encabezado">
-  <h1>Pokédex Inteligente: Visión Artificial y Análisis de Datos</h1>
-  <p>Modelo YOLOv8n-cls · Exploración interactiva de estadísticas, tipos y evoluciones</p>
+  <h1>Pokédex Inteligente con YOLOv8</h1>
+  <p>Clasificación visual por IA, análisis de estadísticas y comparativa de especies.</p>
 </div>
 """, unsafe_allow_html=True)
 
-tabs = st.tabs(["Reconocimiento IA", "Buscador de Pokédex", "Comparativa de Poder", "Estadísticas Globales"])
+pokemon_detectado = None
+imagen_cargada = None
 
-pokemon_activo = None
+if archivo_imagen is not None:
+    imagen_cargada = Image.open(archivo_imagen)
+    if model is not None:
+        results = model(imagen_cargada)
+        top_1_idx = results[0].probs.top1
+        detectado_nombre = results[0].names[top_1_idx]
+        confianza_val = results[0].probs.top1conf.item() * 100
+        
+        if df_pokemon is not None:
+            match = df_pokemon[df_pokemon["name_lower"] == detectado_nombre.lower()]
+            if not match.empty:
+                pokemon_detectado = match.iloc[0]
 
-# --- PESTAÑA 1: RECONOCIMIENTO IA ---
-with tabs[0]:
-    st.subheader("Clasificación de Imágenes en Tiempo Real")
-    if archivo_imagen is not None:
-        col1, col2 = st.columns([1, 1.5], gap="large")
+if pokemon_detectado is not None:
+    # Definir las 3 pestañas solicitadas
+    tabs = st.tabs(["⚡ Ficha Principal y Stats", "🧬 Evolución", "⚔️ Comparativa de Poder"])
+    
+    # --- PESTAÑA 1: FICHA PRINCIPAL Y STATS ---
+    with tabs[0]:
+        col1, col2 = st.columns([1, 1.6], gap="large")
+        
         with col1:
-            imagen = Image.open(archivo_imagen)
-            st.image(imagen, caption="Imagen analizada", use_container_width=True)
+            st.subheader("📸 Imagen Analizada")
+            st.image(imagen_cargada, use_container_width=True)
+            st.success(f"¡Detectado: **{pokemon_detectado['Name']}**!")
+            st.metric(label="Confianza del Modelo", value=f"{confianza_val:.1f}%")
+            
         with col2:
-            if model is not None:
-                with st.spinner("Procesando imagen con YOLOv8..."):
-                    results = model(imagen)
-                    top_1_idx = results[0].probs.top1
-                    detectado = results[0].names[top_1_idx]
-                    confianza = results[0].probs.top1conf.item() * 100
-                
-                st.success(f"¡Identificado como: **{detectado}**!")
-                st.metric(label="Confianza del Modelo", value=f"{confianza:.1f}%")
-                
-                if df_pokemon is not None:
-                    match = df_pokemon[df_pokemon["name_lower"] == detectado.lower()]
-                    if not match.empty:
-                        pokemon_activo = match.iloc[0]
-            else:
-                st.error("No se pudo cargar el modelo `best.pt`.")
-    else:
-        st.info("Sube una imagen de un Pokémon en la barra lateral para activar el reconocimiento por IA.")
+            st.subheader("📊 Atributos y Estadísticas Base")
+            
+            t1 = pokemon_detectado["Type1"]
+            t2 = pokemon_detectado.get("Type2")
+            tipos = [t1]
+            if pd.notna(t2) and str(t2).strip() != "" and str(t2).lower() != "nan":
+                tipos.append(t2)
+            tipos_es = [TRADUCCION_TIPOS.get(str(t).strip(), str(t).strip()) for t in tipos]
+            
+            st.markdown(f"**Tipo(s):** `{' / '.join(tipos_es)}` &nbsp;|&nbsp; **Generación:** `{pokemon_detectado['Generation']}`")
+            
+            stats_dict = {
+                "PS (HP)": int(pokemon_detectado['HP']),
+                "Ataque (Attack)": int(pokemon_detectado['Attack']),
+                "Defensa (Defense)": int(pokemon_detectado['Defense']),
+                "At. Esp. (Sp. Atk)": int(pokemon_detectado['Sp. Atk']),
+                "Def. Esp. (Sp. Def)": int(pokemon_detectado['Sp. Def']),
+                "Velocidad (Speed)": int(pokemon_detectado['Speed'])
+            }
+            
+            for label, val in stats_dict.items():
+                col_s1, col_s2 = st.columns([3, 1])
+                with col_s1:
+                    st.markdown(f"**{label}**")
+                    st.progress(min(val / 180.0, 1.0))
+                with col_s2:
+                    st.markdown(f"<h3 style='margin:0; text-align:right;'>{val}</h3>", unsafe_allow_html=True)
+            
+            st.markdown(f"**Total Estadísticas Base:** `{int(pokemon_detectado['Total'])}`")
 
-# --- PESTAÑA 2: BUSCADOR DE POKÉDEX ---
-with tabs[1]:
-    st.subheader("Explorador Manual de la Base de Datos")
-    if df_pokemon is not None:
-        nombres_pokes = df_pokemon["Name"].tolist()
-        seleccion_manual = st.selectbox("Selecciona o busca un Pokémon:", nombres_pokes)
-        match_manual = df_pokemon[df_pokemon["Name"] == seleccion_manual]
-        if not match_manual.empty:
-            pokemon_activo = match_manual.iloc[0]
-
-# Si tenemos un Pokémon activo, mostramos su ficha técnica completa
-if pokemon_activo is not None:
-    st.markdown("---")
-    st.markdown(f"### Ficha Técnica: **{pokemon_activo['Name']}** (ID: {pokemon_activo['ID']})")
-    
-    t1, t2 = pokemon_activo["Type1"], pokemon_activo.get("Type2")
-    tipos = [t1]
-    if pd.notna(t2) and str(t2).strip() != "" and str(t2).lower() != "nan":
-        tipos.append(t2)
-    tipos_es = [TRADUCCION_TIPOS.get(str(t).strip(), str(t).strip()) for t in tipos]
-    
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Tipo(s)", " / ".join(tipos_es))
-    c2.metric("Generación", int(pokemon_activo['Generation']))
-    c3.metric("Total Estadísticas", int(pokemon_activo['Total']))
-    c4.metric("Poder de Ataque", int(pokemon_activo['Attack']))
-    
-    # Detalle de estadísticas base
-    st.markdown("#### Estadísticas Base")
-    s1, s2, s3, s4, s5, s6 = st.columns(6)
-    s1.metric("HP", int(pokemon_activo['HP']))
-    s2.metric("Ataque", int(pokemon_activo['Attack']))
-    s3.metric("Defensa", int(pokemon_activo['Defense']))
-    s4.metric("At. Esp.", int(pokemon_activo['Sp. Atk']))
-    s5.metric("Def. Esp.", int(pokemon_activo['Sp. Def']))
-    s6.metric("Velocidad", int(pokemon_activo['Speed']))
-    
-    # Línea evolutiva usando pokemon_evolution.csv
-    if df_evolution is not None and df_pokemon is not None:
-        poke_id = pokemon_activo['ID']
-        # Buscar evoluciones donde este pokemon sea el origen (id)
-        evos = df_evolution[df_evolution['id'] == poke_id]
-        if not evos.empty:
-            st.markdown("#### 🧬 Línea de Evolución")
-            for _, row in evos.iterrows():
-                evolved_id = row['evolved_species_id']
-                evo_match = df_pokemon[df_pokemon['ID'] == evolved_id]
-                if not evo_match.empty:
-                    evo_name = evo_match.iloc[0]['Name']
-                    nivel_req = row['minimum_level']
-                    trigger = row['evolution_trigger_id']
-                    
-                    detalle_evo = f"Evoluciona a **{evo_name}**"
-                    if pd.notna(nivel_req):
-                        detalle_evo += f" al alcanzar el **Nivel {int(nivel_req)}**"
-                    elif trigger == 2:
-                        detalle_evo += " por intercambio"
-                    elif pd.notna(row['trigger_item_id']):
-                        detalle_evo += " usando un objeto especial"
+    # --- PESTAÑA 2: EVOLUCIÓN ---
+    with tabs[1]:
+        st.subheader(f"🧬 Línea Evolutiva de {pokemon_detectado['Name']}")
+        
+        if df_evolution is not None and df_pokemon is not None:
+            poke_id = pokemon_detectado['ID']
+            evos = df_evolution[df_evolution['id'] == poke_id]
+            
+            if not evos.empty:
+                for _, row in evos.iterrows():
+                    evolved_id = row['evolved_species_id']
+                    evo_match = df_pokemon[df_pokemon['ID'] == evolved_id]
+                    if not evo_match.empty:
+                        evo_name = evo_match.iloc[0]['Name']
+                        nivel_req = row['minimum_level']
+                        trigger = row['evolution_trigger_id']
                         
-                    st.info(detalle_evo)
+                        detalle = f"➔ Evoluciona a **{evo_name}**"
+                        if pd.notna(nivel_req):
+                            detalle += f" al alcanzar el **Nivel {int(nivel_req)}**"
+                        elif trigger == 2:
+                            detalle += " mediante **Intercambio**"
+                        elif pd.notna(row['trigger_item_id']):
+                            detalle += " usando un **Objeto especial**"
+                        else:
+                            detalle += " bajo condiciones específicas"
+                            
+                        st.info(detalle)
+            else:
+                st.info(f"**{pokemon_detectado['Name']}** no registra evoluciones posteriores en la base de datos.")
+        else:
+            st.warning("No se encontró el archivo `pokemon_evolution.csv`.")
 
-# --- PESTAÑA 3: COMPARATIVA DE PODER ---
-with tabs[2]:
-    st.subheader("Análisis Gráfico de Estadísticas")
-    if df_pokemon is not None and pokemon_activo is not None:
+    # --- PESTAÑA 3: COMPARATIVA DE PODER ---
+    with tabs[2]:
+        st.subheader("⚔️ Comparativa de Estadísticas")
+        st.markdown(f"Compara el poder base de **{pokemon_detectado['Name']}** con cualquier otro Pokémon de la base de datos.")
+        
+        lista_nombres = df_pokemon["Name"].tolist()
+        # Seleccionar por defecto otro pokemon para comparar o el mismo
+        rival_seleccionado = st.selectbox("Selecciona el Pokémon rival para comparar:", lista_nombres, index=min(1, len(lista_nombres)-1))
+        
+        rival_data = df_pokemon[df_pokemon["Name"] == rival_seleccionado].iloc[0]
+        
         categorias = ['HP', 'Ataque', 'Defensa', 'At. Esp.', 'Def. Esp.', 'Velocidad']
-        valores_poke = [
-            pokemon_activo['HP'], pokemon_activo['Attack'], pokemon_activo['Defense'],
-            pokemon_activo['Sp. Atk'], pokemon_activo['Sp. Def'], pokemon_activo['Speed']
+        valores_detectado = [
+            pokemon_detectado['HP'], pokemon_detectado['Attack'], pokemon_detectado['Defense'],
+            pokemon_detectado['Sp. Atk'], pokemon_detectado['Sp. Def'], pokemon_detectado['Speed']
         ]
-        promedios_globales = [
-            df_pokemon['HP'].mean(), df_pokemon['Attack'].mean(), df_pokemon['Defense'].mean(),
-            df_pokemon['Sp. Atk'].mean(), df_pokemon['Sp. Def'].mean(), df_pokemon['Speed'].mean()
+        valores_rival = [
+            rival_data['HP'], rival_data['Attack'], rival_data['Defense'],
+            rival_data['Sp. Atk'], rival_data['Sp. Def'], rival_data['Speed']
         ]
         
         fig = go.Figure()
         fig.add_trace(go.Scatterpolar(
-            r=valores_poke, theta=categorias, fill='toself', name=pokemon_activo['Name'],
+            r=valores_detectado, theta=categorias, fill='toself', name=pokemon_detectado['Name'],
             line=dict(color=AZUL)
         ))
         fig.add_trace(go.Scatterpolar(
-            r=promedios_globales, theta=categorias, fill='toself', name='Promedio Global Pokédex',
-            line=dict(color=COBRE, dash='dot')
+            r=valores_rival, theta=categorias, fill='toself', name=rival_data['Name'],
+            line=dict(color=COBRE)
         ))
         fig.update_layout(
             polar=dict(radialaxis=dict(visible=True, range=[0, 250])),
-            showlegend=True, height=450, margin=dict(l=40, r=40, t=40, b=40)
+            showlegend=True, height=500, margin=dict(l=40, r=40, t=40, b=40)
         )
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("Selecciona o detecta un Pokémon en las pestañas anteriores para ver su gráfico comparativo.")
 
-# --- PESTAÑA 4: ESTADÍSTICAS GLOBALES ---
-with tabs[3]:
-    st.subheader("Resumen General de la Base de Datos")
-    if df_pokemon is not None:
-        g1, g2, g3 = st.columns(3)
-        g1.metric("Total de Especies en Base", len(df_pokemon))
-        g2.metric("Ataque Promedio General", f"{df_pokemon['Attack'].mean():.1f}")
-        g3.metric("Defensa Promedio General", f"{df_pokemon['Defense'].mean():.1f}")
-        
-        st.markdown("#### Muestra de la Base de Datos")
-        st.dataframe(df_pokemon[['ID', 'Name', 'Type1', 'Type2', 'Total', 'Generation']].head(10), hide_index=True)
+else:
+    st.info("👈 Sube una imagen de un Pokémon en la barra lateral para iniciar el análisis automático y activar las pestañas.")
 
-# Pie de página ejecutivo
+# Pie de página
 st.markdown(f"<hr style='border:none;border-top:1px solid {GRILLA}'>"
-            f"<p style='color: {TENUE}; text-align: center;'>Ayudantía IA para la Gestión Industrial · UDD · Streamlit + Plotly + YOLOv8</p>",
+            f"<p style='color: {TENUE}; text-align: center;'>Ayudantía IA para la Gestión Industrial · UDD</p>",
             unsafe_allow_html=True)
