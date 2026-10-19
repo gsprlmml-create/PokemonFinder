@@ -294,7 +294,7 @@ if pokemon_detectado is not None:
                         Por favor, entrega una recomendación táctica corta sobre su rol principal en combate, fortalezas y debilidades a considerar. 
                         Incluye un aviso aclarando que este es un prototipo educativo de apoyo táctico.
                         """
-                        model_gemini = genai.GenerativeModel('gemini-1.5-pro')
+                        model_gemini = genai.GenerativeModel('gemini-1.5-flash-latest')
                         response = model_gemini.generate_content(prompt)
                         st.success("¡Recomendación generada con éxito!")
                         st.markdown(response.text)
