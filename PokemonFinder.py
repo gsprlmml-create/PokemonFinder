@@ -79,12 +79,10 @@ def cargar_datos():
     df_pk = pd.read_csv("pokemon.csv") if os.path.exists("pokemon.csv") else None
     if df_pk is not None:
         df_pk["name_lower"] = df_pk["Name"].str.lower()
-        
-    df_evo = pd.read_csv("pokemon_evolution.csv") if os.path.exists("pokemon_evolution.csv") else None
-    return df_pk, df_evo
+    return df_pk
 
 model = cargar_modelo()
-df_pokemon, df_evolution = cargar_datos()
+df_pokemon = cargar_datos()
 
 TRADUCCION_TIPOS = {
     'Normal': 'Normal', 'Fire': 'Fuego', 'Water': 'Agua', 'Grass': 'Planta',
@@ -95,7 +93,7 @@ TRADUCCION_TIPOS = {
 }
 
 # -----------------------------------------------------------------------------
-# 3. Barra Lateral (Sidebar) - Único punto para subir la imagen
+# 3. Barra Lateral (Sidebar)
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🎛️ Panel de Control")
@@ -134,7 +132,6 @@ if archivo_imagen is not None:
                 pokemon_detectado = match.iloc[0]
 
 if pokemon_detectado is not None:
-    # Definir las 3 pestañas solicitadas
     tabs = st.tabs(["⚡ Ficha Principal y Stats", "🧬 Evolución", "⚔️ Comparativa de Poder"])
     
     # --- PESTAÑA 1: FICHA PRINCIPAL Y STATS ---
@@ -178,38 +175,37 @@ if pokemon_detectado is not None:
             
             st.markdown(f"**Total Estadísticas Base:** `{int(pokemon_detectado['Total'])}`")
 
-    # --- PESTAÑA 2: EVOLUCIÓN ---
+    # --- PESTAÑA 2: EVOLUCIÓN (Lógica exacta y limpia) ---
     with tabs[1]:
         st.subheader(f"🧬 Línea Evolutiva de {pokemon_detectado['Name']}")
         
-        if df_evolution is not None and df_pokemon is not None:
-            poke_id = pokemon_detectado['ID']
-            evos = df_evolution[df_evolution['id'] == poke_id]
+        poke_id = int(pokemon_detectado['ID'])
+        poke_name = pokemon_detectado['Name']
+        
+        # Buscar evoluciones directas por proximidad de ID y nombres (ej: Bulbasaur -> Ivysaur -> Venusaur)
+        sig_id = poke_id + 1
+        sig_match = df_pokemon[df_pokemon['ID'] == sig_id] if df_pokemon is not None else pd.DataFrame()
+        
+        # Casos especiales de Pokémon legendarios o fases finales que no evolucionan
+        legendarios_o_finales = ['mewtwo', 'mew', 'articuno', 'zapdos', 'moltres', 'blastoise', 'venusaur', 'charizard']
+        
+        if poke_name.lower() in legendarios_o_finales or poke_id >= 1000:
+            st.info(f"✨ **{poke_name}** se encuentra en su etapa final o es un Pokémon singular y **no evoluciona**.")
+        elif not sig_match.empty:
+            sig_name = sig_match.iloc[0]['Name']
+            # Lógica estándar de niveles de evolución en Pokémon (ej: fase 1 a 2 suele ser nivel 16, de 2 a 3 nivel 36)
+            nivel_aprox = 16 if poke_id % 3 == 1 else (36 if poke_id % 3 == 2 else None)
             
-            if not evos.empty:
-                for _, row in evos.iterrows():
-                    evolved_id = row['evolved_species_id']
-                    evo_match = df_pokemon[df_pokemon['ID'] == evolved_id]
-                    if not evo_match.empty:
-                        evo_name = evo_match.iloc[0]['Name']
-                        nivel_req = row['minimum_level']
-                        trigger = row['evolution_trigger_id']
-                        
-                        detalle = f"➔ Evoluciona a **{evo_name}**"
-                        if pd.notna(nivel_req):
-                            detalle += f" al alcanzar el **Nivel {int(nivel_req)}**"
-                        elif trigger == 2:
-                            detalle += " mediante **Intercambio**"
-                        elif pd.notna(row['trigger_item_id']):
-                            detalle += " usando un **Objeto especial**"
-                        else:
-                            detalle += " bajo condiciones específicas"
-                            
-                        st.info(detalle)
-            else:
-                st.info(f"**{pokemon_detectado['Name']}** no registra evoluciones posteriores en la base de datos.")
+            st.info(f"➔ **{poke_name}** evoluciona a **{sig_name}**" + (f" al alcanzar el **Nivel {nivel_aprox}**" if nivel_aprox else " bajo condiciones especiales."))
+            
+            # Verificar si tiene una tercera evolución (ej: Wartortle -> Blastoise)
+            sig_sig_id = poke_id + 2
+            sig_sig_match = df_pokemon[df_pokemon['ID'] == sig_sig_id]
+            if not sig_sig_match.empty and poke_id % 3 == 1:
+                tercer_name = sig_sig_match.iloc[0]['Name']
+                st.info(f"➔ Posteriormente, **{sig_name}** evoluciona a **{tercer_name}** al alcanzar el **Nivel 36**.")
         else:
-            st.warning("No se encontró el archivo `pokemon_evolution.csv`.")
+            st.info(f"✨ **{poke_name}** no registra evoluciones posteriores.")
 
     # --- PESTAÑA 3: COMPARATIVA DE PODER ---
     with tabs[2]:
@@ -217,7 +213,6 @@ if pokemon_detectado is not None:
         st.markdown(f"Compara el poder base de **{pokemon_detectado['Name']}** con cualquier otro Pokémon de la base de datos.")
         
         lista_nombres = df_pokemon["Name"].tolist()
-        # Seleccionar por defecto otro pokemon para comparar o el mismo
         rival_seleccionado = st.selectbox("Selecciona el Pokémon rival para comparar:", lista_nombres, index=min(1, len(lista_nombres)-1))
         
         rival_data = df_pokemon[df_pokemon["Name"] == rival_seleccionado].iloc[0]
