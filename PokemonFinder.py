@@ -104,7 +104,7 @@ TRADUCCION_TIPOS = {
 # 3. Barra Lateral (Sidebar)
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("### 🔴 Panel de Control - Pokémon Finder")
+    st.markdown("### 🔴 Panel de Control ")
     archivo_imagen = st.file_uploader("Sube la imagen del Pokémon", type=["jpg", "jpeg", "png"])
     st.markdown("---")
     
