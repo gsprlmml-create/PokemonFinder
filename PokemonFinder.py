@@ -93,17 +93,33 @@ TRADUCCION_TIPOS = {
 }
 
 # -----------------------------------------------------------------------------
-# 3. Barra Lateral (Sidebar)
+# 3. Barra Lateral (Sidebar) - Mantiene la imagen visible en todo momento
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🎛️ Panel de Control")
     archivo_imagen = st.file_uploader("Sube la imagen del Pokémon", type=["jpg", "jpeg", "png"])
     st.markdown("---")
+    
+    imagen_cargada = None
+    pokemon_detectado = None
+    confianza_val = 0.0
+
+    if archivo_imagen is not None:
+        imagen_cargada = Image.open(archivo_imagen)
+        st.image(imagen_cargada, caption="Imagen Analizada", use_container_width=True)
+        
+        if model is not None:
+            results = model(imagen_cargada)
+            top_1_idx = results[0].probs.top1
+            detectado_nombre = results[0].names[top_1_idx]
+            confianza_val = results[0].probs.top1conf.item() * 100
+            
+            if df_pokemon is not None:
+                match = df_pokemon[df_pokemon["name_lower"] == detectado_nombre.lower()]
+                if not match.empty:
+                    pokemon_detectado = match.iloc[0]
+
     st.caption("Pokédex Inteligente · YOLOv8n-cls")
-    if model is None:
-        st.error("⚠️ Falta el archivo `best.pt`")
-    if df_pokemon is None:
-        st.error("⚠️ Falta el archivo `pokemon.csv`")
 
 # -----------------------------------------------------------------------------
 # 4. Panel Principal
@@ -115,22 +131,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-pokemon_detectado = None
-imagen_cargada = None
-
-if archivo_imagen is not None:
-    imagen_cargada = Image.open(archivo_imagen)
-    if model is not None:
-        results = model(imagen_cargada)
-        top_1_idx = results[0].probs.top1
-        detectado_nombre = results[0].names[top_1_idx]
-        confianza_val = results[0].probs.top1conf.item() * 100
-        
-        if df_pokemon is not None:
-            match = df_pokemon[df_pokemon["name_lower"] == detectado_nombre.lower()]
-            if not match.empty:
-                pokemon_detectado = match.iloc[0]
-
 if pokemon_detectado is not None:
     tabs = st.tabs(["⚡ Ficha Principal y Stats", "🧬 Evolución", "⚔️ Comparativa de Poder"])
     
@@ -139,7 +139,7 @@ if pokemon_detectado is not None:
         col1, col2 = st.columns([1, 1.6], gap="large")
         
         with col1:
-            st.subheader("📸 Imagen Analizada")
+            st.subheader("📸 Vista Previa")
             st.image(imagen_cargada, use_container_width=True)
             st.success(f"¡Detectado: **{pokemon_detectado['Name']}**!")
             st.metric(label="Confianza del Modelo", value=f"{confianza_val:.1f}%")
@@ -175,72 +175,93 @@ if pokemon_detectado is not None:
             
             st.markdown(f"**Total Estadísticas Base:** `{int(pokemon_detectado['Total'])}`")
 
-    # --- PESTAÑA 2: EVOLUCIÓN (Lógica exacta y limpia) ---
+    # --- PESTAÑA 2: EVOLUCIÓN (Pre-evolución y Siguiente Evolución) ---
     with tabs[1]:
         st.subheader(f"🧬 Línea Evolutiva de {pokemon_detectado['Name']}")
         
         poke_id = int(pokemon_detectado['ID'])
         poke_name = pokemon_detectado['Name']
         
-        # Buscar evoluciones directas por proximidad de ID y nombres (ej: Bulbasaur -> Ivysaur -> Venusaur)
+        legendarios_o_unicos = ['mewtwo', 'mew', 'articuno', 'zapdos', 'moltres', 'ditto', 'unown']
+        
+        # 1. Pre-evolución (si el ID es mayor al inicial de su cadena base)
+        tiene_preevo = False
+        if poke_id not in [1, 4, 7, 10, 13, 16, 21, 25, 27, 29, 32, 35, 37, 39, 41, 43, 46, 48, 50, 52, 54, 56, 60, 63, 66, 69, 72, 74, 77, 79, 81, 84, 86, 88, 90, 92, 95, 96, 98, 100, 102, 104, 108, 109, 111, 116, 118, 120, 123, 127, 129, 133, 138, 140, 142, 147, 152, 155, 158] and poke_name.lower() not in legendarios_o_unicos:
+            # Buscar pre-evolución lógica anterior dentro del mismo bloque de IDs
+            prev_id = poke_id - 1
+            prev_match = df_pokemon[df_pokemon['ID'] == prev_id]
+            if not prev_match.empty:
+                prev_name = prev_match.iloc[0]['Name']
+                nivel_evo = 16 if poke_id % 3 == 2 else (36 if poke_id % 3 == 0 else None)
+                st.info(f"⬅️ **Pre-evolución:** Proviene de **{prev_name}** (evolucionó al alcanzar el **Nivel {nivel_evo}** aprox).")
+                tiene_preevo = True
+                
+        if not tiene_preevo and poke_name.lower() not in legendarios_o_unicos:
+            st.info(f"✨ **{poke_name}** es la primera etapa de su línea evolutiva (no tiene pre-evolución).")
+
+        # 2. Siguiente Evolución
         sig_id = poke_id + 1
         sig_match = df_pokemon[df_pokemon['ID'] == sig_id] if df_pokemon is not None else pd.DataFrame()
         
-        # Casos especiales de Pokémon legendarios o fases finales que no evolucionan
-        legendarios_o_finales = ['mewtwo', 'mew', 'articuno', 'zapdos', 'moltres', 'blastoise', 'venusaur', 'charizard']
-        
-        if poke_name.lower() in legendarios_o_finales or poke_id >= 1000:
-            st.info(f"✨ **{poke_name}** se encuentra en su etapa final o es un Pokémon singular y **no evoluciona**.")
-        elif not sig_match.empty:
+        if poke_name.lower() in legendarios_o_unicos or poke_id >= 1000:
+            st.info(f"✨ **{poke_name}** es un Pokémon legendario o singular y **no evoluciona**.")
+        elif not sig_match.empty and poke_id % 3 != 0:
             sig_name = sig_match.iloc[0]['Name']
-            # Lógica estándar de niveles de evolución en Pokémon (ej: fase 1 a 2 suele ser nivel 16, de 2 a 3 nivel 36)
-            nivel_aprox = 16 if poke_id % 3 == 1 else (36 if poke_id % 3 == 2 else None)
+            nivel_req = 16 if poke_id % 3 == 1 else 36
+            st.info(f"➔ **Siguiente Evolución:** Evoluciona a **{sig_name}** al alcanzar el **Nivel {nivel_req}**.")
             
-            st.info(f"➔ **{poke_name}** evoluciona a **{sig_name}**" + (f" al alcanzar el **Nivel {nivel_aprox}**" if nivel_aprox else " bajo condiciones especiales."))
-            
-            # Verificar si tiene una tercera evolución (ej: Wartortle -> Blastoise)
+            # Tercera fase si existe (ej: Wartortle -> Blastoise)
             sig_sig_id = poke_id + 2
             sig_sig_match = df_pokemon[df_pokemon['ID'] == sig_sig_id]
             if not sig_sig_match.empty and poke_id % 3 == 1:
                 tercer_name = sig_sig_match.iloc[0]['Name']
-                st.info(f"➔ Posteriormente, **{sig_name}** evoluciona a **{tercer_name}** al alcanzar el **Nivel 36**.")
+                st.info(f"➔ **Fase Final:** Posteriormente evoluciona a **{tercer_name}** al alcanzar el **Nivel 36**.")
         else:
-            st.info(f"✨ **{poke_name}** no registra evoluciones posteriores.")
+            st.info(f"✨ **{poke_name}** se encuentra en su etapa final y **no tiene más evoluciones**.")
 
-    # --- PESTAÑA 3: COMPARATIVA DE PODER ---
+    # --- PESTAÑA 3: COMPARATIVA DE PODER (Mantiene imagen a la izquierda) ---
     with tabs[2]:
         st.subheader("⚔️ Comparativa de Estadísticas")
-        st.markdown(f"Compara el poder base de **{pokemon_detectado['Name']}** con cualquier otro Pokémon de la base de datos.")
         
-        lista_nombres = df_pokemon["Name"].tolist()
-        rival_seleccionado = st.selectbox("Selecciona el Pokémon rival para comparar:", lista_nombres, index=min(1, len(lista_nombres)-1))
+        col_comp1, col_comp2 = st.columns([1, 2], gap="large")
         
-        rival_data = df_pokemon[df_pokemon["Name"] == rival_seleccionado].iloc[0]
-        
-        categorias = ['HP', 'Ataque', 'Defensa', 'At. Esp.', 'Def. Esp.', 'Velocidad']
-        valores_detectado = [
-            pokemon_detectado['HP'], pokemon_detectado['Attack'], pokemon_detectado['Defense'],
-            pokemon_detectado['Sp. Atk'], pokemon_detectado['Sp. Def'], pokemon_detectado['Speed']
-        ]
-        valores_rival = [
-            rival_data['HP'], rival_data['Attack'], rival_data['Defense'],
-            rival_data['Sp. Atk'], rival_data['Sp. Def'], rival_data['Speed']
-        ]
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatterpolar(
-            r=valores_detectado, theta=categorias, fill='toself', name=pokemon_detectado['Name'],
-            line=dict(color=AZUL)
-        ))
-        fig.add_trace(go.Scatterpolar(
-            r=valores_rival, theta=categorias, fill='toself', name=rival_data['Name'],
-            line=dict(color=COBRE)
-        ))
-        fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 250])),
-            showlegend=True, height=500, margin=dict(l=40, r=40, t=40, b=40)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        with col_comp1:
+            st.markdown(f"**Pokémon Analizado:**")
+            st.image(imagen_cargada, use_container_width=True)
+            st.markdown(f"### {pokemon_detectado['Name']}")
+            st.markdown(f"Total Stats: **{int(pokemon_detectado['Total'])}**")
+            
+        with col_comp2:
+            st.markdown("Compara el poder base con cualquier otro Pokémon de la base de datos.")
+            lista_nombres = df_pokemon["Name"].tolist()
+            rival_seleccionado = st.selectbox("Selecciona el Pokémon rival para comparar:", lista_nombres, index=min(1, len(lista_nombres)-1))
+            
+            rival_data = df_pokemon[df_pokemon["Name"] == rival_seleccionado].iloc[0]
+            
+            categorias = ['HP', 'Ataque', 'Defensa', 'At. Esp.', 'Def. Esp.', 'Velocidad']
+            valores_detectado = [
+                pokemon_detectado['HP'], pokemon_detectado['Attack'], pokemon_detectado['Defense'],
+                pokemon_detectado['Sp. Atk'], pokemon_detectado['Sp. Def'], pokemon_detectado['Speed']
+            ]
+            valores_rival = [
+                rival_data['HP'], rival_data['Attack'], rival_data['Defense'],
+                rival_data['Sp. Atk'], rival_data['Sp. Def'], rival_data['Speed']
+            ]
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatterpolar(
+                r=valores_detectado, theta=categorias, fill='toself', name=pokemon_detectado['Name'],
+                line=dict(color=AZUL)
+            ))
+            fig.add_trace(go.Scatterpolar(
+                r=valores_rival, theta=categorias, fill='toself', name=rival_data['Name'],
+                line=dict(color=COBRE)
+            ))
+            fig.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 250])),
+                showlegend=True, height=420, margin=dict(l=20, r=20, t=20, b=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 else:
     st.info("👈 Sube una imagen de un Pokémon en la barra lateral para iniciar el análisis automático y activar las pestañas.")
