@@ -42,3 +42,37 @@ mi-proyecto/
 ├── modelo/
 │   └── best.pt               ← Pesos entrenados del modelo YOLOv8
 └── ejemplos/                 ← Imágenes de prueba para la demo
+```
+## 5. Instrucciones de Uso y Despliegue
+A. Ejecución Local
+Clonar el repositorio:
+* **git clone [https://github.com/tu-usuario/tu-repositorio.git](https://github.com/tu-usuario/tu-repositorio.git)** 
+* **cd tu-repositorio** 
+* **Instalar las dependencias necesarias:** 
+* **pip install -r requirements.txt** 
+
+Configurar la clave de la API (Gemini):
+Crea una carpeta llamada .streamlit en la raíz del proyecto y dentro un archivo llamado secrets.toml:
+* **GEMINI_API_KEY = ""** 
+
+Ejecutar la aplicación web:
+* **streamlit run PokemonFinder.py** 
+
+B. Despliegue en la Nube (Streamlit Cloud)
+Sube todos los archivos del proyecto a un repositorio público en GitHub.
+
+Entra a Streamlit Community Cloud con tu cuenta de GitHub.
+
+Haz clic en New app y selecciona tu repositorio, la rama (main) y el archivo principal (PokemonFinder.py).
+
+En la configuración avanzada, ve a Settings -> Secrets y pega tu clave secreta:
+
+* **GEMINI_API_KEY = ""** 
+* **Haz clic en Deploy para publicar la aplicación de forma pública y gratuita.** 
+
+🤖 6. Declaración del Uso de Inteligencia Artificial
+Para el desarrollo de este proyecto se utilizaron herramientas de Inteligencia Artificial de manera complementaria:
+
+Google Gemini / ChatGPT: Utilizados como asistentes de programación para estructurar el diseño de la interfaz en Streamlit, depurar la lógica de visualización de estadísticas y resolver incompatibilidades en las llamadas a la API de modelos de lenguaje (google-generativeai).
+
+Todo el código generado fue revisado, adaptado, integrado y probado por los integrantes del grupo para asegurar su correcto funcionamiento en la aplicación final.
